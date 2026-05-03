@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Xprinter XP-470B  vendor 0x2D37 = 11575 -->
+    <usb-device vendor-id="11575" />
+    <!-- Other common Xprinter VIDs -->
+    <usb-device vendor-id="5380" />   <!-- 0x1504 -->
+    <usb-device vendor-id="4070" />   <!-- 0x0FE6 -->
+    <usb-device vendor-id="10023" />  <!-- 0x2727 -->
+    <usb-device vendor-id="5455" />   <!-- 0x154F -->
+</resources>

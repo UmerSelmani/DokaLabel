@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="DokaLabel" />
+<meta name="theme-color" content="#0d0d0d" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="application-name" content="Doka Label Studio" />
+<meta name="description" content="Professional label designer for 58×40mm thermal labels" />
+<title>Doka Label Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<link rel="manifest" href="./manifest.json" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; overflow: hidden; background: #111; }
+  body { font-family: monospace; color: #eee; -webkit-tap-highlight-color: transparent; }
+  input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #111; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  select option { background: #222; color: #eee; }
+
+  .bar-toolbar { display:flex; flex-direction:column; background:#141414; border-bottom:1px solid #1e1e1e; flex-shrink:0; }
+  .bar-row-add  { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; padding:5px 8px; }
+  .bar-row-meta { display:flex; gap:0; padding:0 8px 5px; align-items:stretch; }
+
+  .bar-btn {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px; padding:5px 2px; border-radius:5px; cursor:pointer;
+    background:#1e1e1e; border:1px solid #2a2a2a; color:#bbb;
+    font-family:monospace; font-size:9px; line-height:1;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bar-btn .icon { font-size:14px; line-height:1; }
+  .bar-btn .lbl  { font-size:8px; color:#666; }
+  .bar-btn:active { background:#2a2a2a; }
+
+  .layer-chips { display:flex; gap:4px; overflow-x:auto; align-items:center; flex:1; scrollbar-width:none; padding:0 6px; }
+  .layer-chips::-webkit-scrollbar { display:none; }
+  .layer-chip {
+    display:flex; align-items:center; gap:3px; padding:4px 8px;
+    border-radius:4px; cursor:pointer; font-size:9px; white-space:nowrap;
+    flex-shrink:0; background:#1a1a1a; border:1px solid #222; color:#666; font-family:monospace;
+  }
+  .layer-chip.active { background:#2d1a0e; border-color:#ff6b35; color:#ff6b35; }
+
+  .props-bar {
+    background:#141414; border-top:2px solid #222;
+    flex-shrink:0; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .props-bar-handle {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 12px; background:#0f0f0f; border-bottom:1px solid #1e1e1e;
+    cursor:pointer; flex-shrink:0; user-select:none;
+  }
+  .props-bar-body { overflow-y:auto; flex:1; }
+
+  /* 2-row top bar */
+  .top-bar { display:flex; flex-direction:column; background:#0d0d0d; border-bottom:1px solid #1e1e1e; flex-shrink:0; }
+  .top-row1 { display:flex; align-items:center; gap:5px; padding:0 8px; height:42px; }
+  .top-row2 { display:flex; align-items:center; gap:4px; padding:0 8px 5px; }
+  .tb-btn { display:flex; align-items:center; justify-content:center; width:30px; height:26px; border-radius:4px; cursor:pointer; font-size:13px; flex-shrink:0; border:1px solid #2a2a2a; background:#1e1e1e; color:#555; font-family:monospace; }
+  .tb-btn:active { background:#2a2a2a; }
+  .tb-btn.on  { background:#0a1a2a; border-color:#4a9eff; color:#4a9eff; }
+  .tb-btn.grid-on { background:#2a1e10; border-color:#ff6b35; color:#ff6b35; }
+  .tb-btn.lay-on  { background:#1a2a1a; border-color:#4a8a4a; color:#6abf6a; }
+  .tb-btn.lay-off { background:#1a1a2a; border-color:#3a3a7a; color:#8888ff; }
+  .tb-btn:disabled { opacity:0.25; cursor:not-allowed; }
+
+  /* Bigger tap targets for textarea on mobile */
+  .content-textarea { font-size:13px !important; padding:8px !important; min-height:60px !important; line-height:1.4 !important; }
+
+  .snap-guide-v {
+    position:absolute; top:0; bottom:0; width:1px;
+    background:rgba(64,160,255,0.7); pointer-events:none; z-index:60;
+  }
+  .snap-guide-h {
+    position:absolute; left:0; right:0; height:1px;
+    background:rgba(64,160,255,0.7); pointer-events:none; z-index:60;
+  }
+
+  /* Rotation handle */
+  .rot-stem {
+    position:absolute; left:calc(50% - 0.5px); width:1px; background:#4a9eff;
+    pointer-events:none; z-index:19; top:-20px; height:20px;
+  }
+  .rot-handle {
+    position:absolute; left:calc(50% - 7px); top:-34px;
+    width:14px; height:14px; background:#4a9eff; border:2px solid #fff;
+    border-radius:50%; cursor:crosshair; z-index:20;
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px; color:#fff; line-height:1;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const MM=10, LW=58, LH=40;
+const genId = () => Math.random().toString(36).slice(2,9);
+const PT_TO_MM = 0.3528;
+const PROPS_H_COLLAPSED = 36;
+const PROPS_H_EXPANDED  = 340;
+const SNAP_THRESHOLD = 1.2; // mm
+
+const store = {
+  get: k=>{ try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;} },
+  set: (k,v)=>{ try{localStorage.setItem(k,JSON.stringify(v));}catch{}  },
+};
+
+const DEFAULTS = {
+  text:    { type:"text",    x:5,y:5,  w:30,h:6,  rotation:0, content:"Text",            style:{fontSize:12,fontWeight:"normal",fontFamily:"Arial",textAlign:"left",color:"#000000",invert:false}, locked:false },
+  barcode: { type:"barcode", x:5,y:10, w:48,h:18, rotation:0, content:"1234567890",       style:{showText:true,format:"CODE128",invert:false}, locked:false },
+  qrcode:  { type:"qrcode",  x:5,y:5,  w:22,h:22, rotation:0, content:"https://doka.mk", style:{invert:false}, locked:false },
+  line:    { type:"line",    x:0,y:20, w:58,h:0.5, rotation:0, content:"",                style:{color:"#000000",invert:false}, locked:false },
+  rect:    { type:"rect",    x:5,y:5,  w:20,h:12, rotation:0, content:"",                 style:{fillColor:"transparent",strokeColor:"#000000",strokeWidth:0.4,borderRadius:0,invert:false}, locked:false },
+  image:   { type:"image",   x:2,y:2,  w:18,h:18, rotation:0, content:"",                style:{objectFit:"contain",opacity:1,invert:false}, locked:false },
+};
+
+const HANDLES = [
+  {id:"nw",cx:0,  cy:0,  cursor:"nwse-resize",dx:1,dy:1, dw:-1,dh:-1},
+  {id:"n", cx:.5, cy:0,  cursor:"ns-resize",  dx:0,dy:1, dw:0, dh:-1},
+  {id:"ne",cx:1,  cy:0,  cursor:"nesw-resize",dx:0,dy:1, dw:1, dh:-1},
+  {id:"e", cx:1,  cy:.5, cursor:"ew-resize",  dx:0,dy:0, dw:1, dh:0 },
+  {id:"se",cx:1,  cy:1,  cursor:"nwse-resize",dx:0,dy:0, dw:1, dh:1 },
+  {id:"s", cx:.5, cy:1,  cursor:"ns-resize",  dx:0,dy:0, dw:0, dh:1 },
+  {id:"sw",cx:0,  cy:1,  cursor:"nesw-resize",dx:1,dy:0, dw:-1,dh:1 },
+  {id:"w", cx:0,  cy:.5, cursor:"ew-resize",  dx:1,dy:0, dw:-1,dh:0 },
+];
+
+// ── Barcode ───────────────────────────────────────────────────────────────────
+function BarcodeEl({ el, scale }) {
+  const ref=useRef(null);
+  useEffect(()=>{
+    const render=()=>{
+      if(!window.JsBarcode||!ref.current)return;
+      try{ window.JsBarcode(ref.current,el.content||"0000000000",{format:el.style.format||"CODE128",width:1.5,height:Math.max((el.h*scale)-(el.style.showText?18:4),8),displayValue:el.style.showText!==false,fontSize:9,margin:2,background:"transparent"}); }
+      catch{ if(ref.current)ref.current.innerHTML=""; }
+    };
+    if(window.JsBarcode)render();
+    else{const t=setInterval(()=>{if(window.JsBarcode){render();clearInterval(t);}},200);return()=>clearInterval(t);}
+  },[el.content,el.style.format,el.style.showText,el.w,el.h,scale]);
+  return <svg ref={ref} style={{width:"100%",height:"100%",display:"block"}} xmlns="http://www.w3.org/2000/svg"/>;
+}
+
+// ── QR ────────────────────────────────────────────────────────────────────────
+function QREl({ el, scale }) {
+  const ref=useRef(null);
+  const size=Math.max(Math.min(el.w,el.h)*scale-4,20);
+  useEffect(()=>{
+    const render=()=>{
+      if(!window.QRCode||!ref.current)return;
+      ref.current.innerHTML="";
+      try{new window.QRCode(ref.current,{text:el.content||"QR",width:size,height:size,correctLevel:window.QRCode.CorrectLevel.M});}catch{}
+    };
+    if(window.QRCode)render();
+    else{const t=setInterval(()=>{if(window.QRCode){render();clearInterval(t);}},200);return()=>clearInterval(t);}
+  },[el.content,size]);
+  return <div ref={ref} style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}/>;
+}
+
+// ── Canvas Element ────────────────────────────────────────────────────────────
+function CanvasEl({ el, scale, selected, onSelect, onDragStart, onResizeStart, onRotateStart }) {
+  const isSel=selected===el.id, isLocked=el.locked;
+  const rot=el.rotation||0;
+  const onMD=e=>{e.stopPropagation();onSelect(el.id);if(!isLocked)onDragStart(e.clientX,e.clientY,el);};
+  const onTS=e=>{e.stopPropagation();onSelect(el.id);if(!isLocked)onDragStart(e.touches[0].clientX,e.touches[0].clientY,el);};
+
+  const base={
+    position:"absolute",left:el.x*scale,top:el.y*scale,
+    width:el.w*scale,height:Math.max(el.h*scale,1),
+    cursor:isLocked?"default":"move",userSelect:"none",boxSizing:"border-box",
+    outline:isSel?`2px solid ${isLocked?"#3a8fff":"#ff6b35"}`:"none",
+    outlineOffset:1,zIndex:isSel?10:1,
+    opacity:el.style?.opacity??1,
+    transform:`rotate(${rot}deg)`,
+    transformOrigin:"center center",
+    filter:el.style?.invert?"invert(1)":"none",
+    background:el.style?.invert?"#ffffff":undefined,
+  };
+  let inner=null;
+  if(el.type==="text") inner=<div style={{width:"100%",height:"100%",overflow:"hidden",lineHeight:1.2,fontSize:el.style.fontSize*PT_TO_MM*scale,fontWeight:el.style.fontWeight,fontFamily:el.style.fontFamily,textAlign:el.style.textAlign,color:el.style.color,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{el.content}</div>;
+  else if(el.type==="barcode") inner=<BarcodeEl el={el} scale={scale}/>;
+  else if(el.type==="qrcode")  inner=<QREl el={el} scale={scale}/>;
+  else if(el.type==="line")    inner=<div style={{width:"100%",height:"100%",background:el.style.color}}/>;
+  else if(el.type==="rect")    inner=<div style={{width:"100%",height:"100%",boxSizing:"border-box",background:el.style.fillColor,border:`${el.style.strokeWidth*scale/MM}px solid ${el.style.strokeColor}`,borderRadius:el.style.borderRadius*scale/MM}}/>;
+  else if(el.type==="image")   inner=el.content
+    ?<img src={el.content} alt="" style={{width:"100%",height:"100%",objectFit:el.style.objectFit||"contain",display:"block"}} draggable={false}/>
+    :<div style={{width:"100%",height:"100%",border:"1.5px dashed #aaa",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#aaa",background:"#f9f9f9"}}>Upload</div>;
+
+  return (
+    <div style={base} onMouseDown={onMD} onTouchStart={onTS} onClick={e=>e.stopPropagation()}>
+      {inner}
+      {isLocked&&<div style={{position:"absolute",top:-8,right:-8,background:"#3a8fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#fff",pointerEvents:"none"}}>🔒</div>}
+      {isSel&&!isLocked&&(
+        <>
+          {/* Rotation handle */}
+          <div className="rot-stem"/>
+          <div className="rot-handle"
+            onMouseDown={e=>{e.stopPropagation();onRotateStart(e.clientX,e.clientY,el);}}
+            onTouchStart={e=>{e.stopPropagation();onRotateStart(e.touches[0].clientX,e.touches[0].clientY,el);}}
+            title="Drag to rotate">↻</div>
+          {/* Resize handles */}
+          {HANDLES.map(h=>(
+            <div key={h.id}
+              onMouseDown={e=>{e.stopPropagation();onResizeStart(e.clientX,e.clientY,el,h);}}
+              onTouchStart={e=>{e.stopPropagation();onResizeStart(e.touches[0].clientX,e.touches[0].clientY,el,h);}}
+              style={{position:"absolute",left:`calc(${h.cx*100}% - 5px)`,top:`calc(${h.cy*100}% - 5px)`,width:10,height:10,background:"#ff6b35",border:"1.5px solid #fff",borderRadius:2,cursor:h.cursor,zIndex:20}}/>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const IS  = {background:"#252525",border:"1px solid #333",color:"#eee",padding:"3px 7px",borderRadius:3,fontSize:11,width:80,fontFamily:"monospace",outline:"none"};
+const BTN = {padding:"4px 10px",border:"none",borderRadius:3,cursor:"pointer",fontSize:11,color:"#fff",fontFamily:"monospace"};
+const PGroup=({label,children})=>(
+  <div style={{marginBottom:12}}>
+    <div style={{color:"#555",fontSize:9,letterSpacing:2,marginBottom:5,borderBottom:"1px solid #222",paddingBottom:3}}>{label}</div>
+    {children}
+  </div>
+);
+const PRow=({label,children})=>(
+  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+    <span style={{color:"#666",fontSize:10,minWidth:52}}>{label}</span>
+    {children}
+  </div>
+);
+
+// ── Properties content ────────────────────────────────────────────────────────
+function PropsContent({ el, onChange, onDelete, onDuplicate, onFront, onBack, onImageUpload }) {
+  if(!el) return (
+    <div style={{color:"#444",fontSize:10,padding:"20px 16px",textAlign:"center",fontFamily:"monospace",lineHeight:1.8}}>
+      Tap an element on the canvas<br/>to edit its properties
+    </div>
+  );
+  const u =(k,v)=>onChange(el.id,{[k]:v});
+  const us=(k,v)=>onChange(el.id,{style:{[k]:v}});
+
+  const rot = el.rotation||0;
+  const snapRot = (v) => {
+    // Snap to nearest 15 degrees if close
+    const snapped = Math.round(v/15)*15;
+    return (Math.abs(v - snapped) < 5) ? snapped : Math.round(v);
+  };
+
+  return (
+    <div style={{padding:"10px 14px",fontFamily:"monospace",fontSize:11,color:"#ccc"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <div style={{color:"#ff6b35",fontWeight:"bold",fontSize:11,textTransform:"uppercase",letterSpacing:1.5}}>■ {el.type}</div>
+        <button onClick={()=>u("locked",!el.locked)} style={{...BTN,padding:"3px 9px",fontSize:10,background:el.locked?"#0d2a4a":"#1e1e1e",border:`1px solid ${el.locked?"#3a8fff":"#333"}`,color:el.locked?"#3a8fff":"#555"}}>
+          {el.locked?"🔒 LOCKED":"🔓 LOCK"}
+        </button>
+      </div>
+
+      <PGroup label="POSITION & SIZE">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
+          {[["X",el.x,"x"],["Y",el.y,"y"],["W",el.w,"w"],["H",el.h,"h"]].map(([lbl,val,key])=>(
+            <div key={key}>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>{lbl} (mm)</div>
+              <input type="number" value={+(val.toFixed(1))} step="0.5" min={key==="w"?1:key==="h"?0.1:undefined}
+                disabled={el.locked} onChange={e=>u(key,+e.target.value)}
+                style={{...IS,width:"100%",opacity:el.locked?0.4:1,padding:"4px 5px"}}/>
+            </div>
+          ))}
+        </div>
+      </PGroup>
+
+      {/* ── ROTATION ── */}
+      <PGroup label="ROTATION">
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <input type="range" min="-180" max="180" step="1" value={rot}
+            onChange={e=>u("rotation",+e.target.value)}
+            style={{flex:1,accentColor:"#4a9eff"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <input type="number" value={rot} min="-180" max="180" step="1"
+              onChange={e=>u("rotation",+e.target.value)}
+              style={{...IS,width:54,padding:"4px 5px",textAlign:"center"}}/>
+            <span style={{color:"#555",fontSize:10}}>°</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
+          {[0,45,90,135,180,-135,-90,-45].map(deg=>(
+            <button key={deg} onClick={()=>u("rotation",deg)}
+              style={{...BTN,padding:"3px 6px",fontSize:8,background:rot===deg?"#1a2a3a":"#1e1e1e",border:`1px solid ${rot===deg?"#4a9eff":"#333"}`,color:rot===deg?"#4a9eff":"#666"}}>
+              {deg}°
+            </button>
+          ))}
+        </div>
+      </PGroup>
+
+      {/* ── COLOR INVERT ── */}
+      <PGroup label="EFFECTS">
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0"}}>
+          <span style={{color:"#888",fontSize:10}}>⊙ Invert Colors</span>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div onClick={()=>us("invert",!el.style?.invert)}
+              style={{width:36,height:18,borderRadius:9,background:el.style?.invert?"#e53e3e":"#2a2a2a",border:`1px solid ${el.style?.invert?"#c53030":"#444"}`,position:"relative",cursor:"pointer",transition:"background 0.2s"}}>
+              <div style={{position:"absolute",top:2,left:el.style?.invert?18:2,width:12,height:12,borderRadius:"50%",background:"#eee",transition:"left 0.2s"}}/>
+            </div>
+          </div>
+        </div>
+        {el.type==="image"&&(
+          <PRow label={`Opacity ${Math.round((el.style.opacity??1)*100)}%`}>
+            <input type="range" min="0.1" max="1" step="0.05" value={el.style.opacity??1}
+              onChange={e=>us("opacity",+e.target.value)}
+              style={{width:90,accentColor:"#ff6b35"}}/>
+          </PRow>
+        )}
+      </PGroup>
+
+      {(el.type==="text"||el.type==="barcode"||el.type==="qrcode")&&(
+        <PGroup label="CONTENT">
+          {el.type==="text"
+            ?<textarea value={el.content} onChange={e=>u("content",e.target.value)} rows={3} className="content-textarea" style={{...IS,width:"100%",resize:"vertical",height:64}}/>
+            :<input type="text" value={el.content} onChange={e=>u("content",e.target.value)} style={{...IS,width:"100%",fontSize:13,padding:"6px 8px"}}/>}
+        </PGroup>
+      )}
+
+      {el.type==="text"&&(
+        <PGroup label="TEXT">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:6}}>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Size (pt)</div>
+              <input type="number" value={el.style.fontSize} min="6" max="96" onChange={e=>us("fontSize",+e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}/>
+            </div>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Color</div>
+              <input type="color" value={el.style.color} onChange={e=>us("color",e.target.value)} style={{width:"100%",height:28,border:"1px solid #333",borderRadius:3,cursor:"pointer",background:"none"}}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:6}}>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Font</div>
+              <select value={el.style.fontFamily} onChange={e=>us("fontFamily",e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}>
+                <option>Arial</option><option>Helvetica</option>
+                <option value="Times New Roman">Times NR</option>
+                <option value="Courier New">Courier</option><option>Georgia</option>
+              </select>
+            </div>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Align</div>
+              <div style={{display:"flex",gap:3}}>
+                {["left","center","right"].map(a=>(
+                  <button key={a} onClick={()=>us("textAlign",a)} style={{...BTN,flex:1,padding:"4px 2px",background:el.style.textAlign===a?"#ff6b35":"#2a2a2a",fontSize:10}}>
+                    {a==="left"?"L":a==="center"?"C":"R"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <PRow label="Bold"><input type="checkbox" checked={el.style.fontWeight==="bold"} onChange={e=>us("fontWeight",e.target.checked?"bold":"normal")}/></PRow>
+        </PGroup>
+      )}
+
+      {el.type==="barcode"&&(
+        <PGroup label="BARCODE">
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center"}}>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Format</div>
+              <select value={el.style.format||"CODE128"} onChange={e=>us("format",e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}>
+                <option value="CODE128">CODE 128</option><option value="EAN13">EAN-13</option>
+                <option value="EAN8">EAN-8</option><option value="UPC">UPC-A</option><option value="CODE39">CODE 39</option>
+              </select>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Text</div>
+              <input type="checkbox" checked={el.style.showText!==false} onChange={e=>us("showText",e.target.checked)} style={{width:18,height:18}}/>
+            </div>
+          </div>
+        </PGroup>
+      )}
+
+      {el.type==="line"&&(
+        <PGroup label="LINE">
+          <PRow label="Color"><input type="color" value={el.style.color} onChange={e=>us("color",e.target.value)} style={{width:40,height:24,border:"none",cursor:"pointer",background:"none"}}/></PRow>
+        </PGroup>
+      )}
+
+      {el.type==="rect"&&(
+        <PGroup label="SHAPE">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:6}}>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Fill</div>
+              <input type="color" value={el.style.fillColor==="transparent"?"#ffffff":el.style.fillColor} onChange={e=>us("fillColor",e.target.value)} style={{width:"100%",height:28,border:"1px solid #333",borderRadius:3,cursor:"pointer",background:"none"}}/>
+            </div>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Stroke</div>
+              <input type="color" value={el.style.strokeColor} onChange={e=>us("strokeColor",e.target.value)} style={{width:"100%",height:28,border:"1px solid #333",borderRadius:3,cursor:"pointer",background:"none"}}/>
+            </div>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>SW (mm)</div>
+              <input type="number" value={el.style.strokeWidth} step="0.1" min="0" max="5" onChange={e=>us("strokeWidth",+e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}/>
+            </div>
+            <div>
+              <div style={{color:"#555",fontSize:8,marginBottom:2}}>Radius</div>
+              <input type="number" value={el.style.borderRadius} step="0.5" min="0" max="20" onChange={e=>us("borderRadius",+e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}/>
+            </div>
+          </div>
+        </PGroup>
+      )}
+
+      {el.type==="image"&&(
+        <PGroup label="IMAGE">
+          <button onClick={()=>onImageUpload(el.id)} style={{...BTN,background:"#1e2a1e",border:"1px solid #2a4a2a",color:"#6abf6a",width:"100%",marginBottom:8,padding:"7px"}}>
+            📁 {el.content?"Replace Image":"Upload Image"}
+          </button>
+          {el.content&&<div style={{marginBottom:8,borderRadius:3,overflow:"hidden",border:"1px solid #2a2a2a"}}>
+            <img src={el.content} alt="" style={{width:"100%",maxHeight:50,objectFit:"contain",display:"block",background:"#f5f5f5"}}/>
+          </div>}
+          <div>
+            <div style={{color:"#555",fontSize:8,marginBottom:2}}>Fit</div>
+            <select value={el.style.objectFit||"contain"} onChange={e=>us("objectFit",e.target.value)} style={{...IS,width:"100%",padding:"4px 5px"}}>
+              <option value="contain">Contain</option><option value="cover">Cover</option><option value="fill">Stretch</option>
+            </select>
+          </div>
+        </PGroup>
+      )}
+
+      <PGroup label="ACTIONS">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:5}}>
+          <button onClick={onDuplicate} style={{...BTN,background:"#2a2a2a",fontSize:9,padding:"6px 2px",textAlign:"center"}}>Copy</button>
+          <button onClick={onFront}     style={{...BTN,background:"#2a2a2a",fontSize:9,padding:"6px 2px",textAlign:"center"}}>↑ Front</button>
+          <button onClick={onBack}      style={{...BTN,background:"#2a2a2a",fontSize:9,padding:"6px 2px",textAlign:"center"}}>↓ Back</button>
+          <button onClick={onDelete} disabled={el.locked} style={{...BTN,background:el.locked?"#1a1a1a":"#6b1a1a",fontSize:9,padding:"6px 2px",opacity:el.locked?0.4:1,cursor:el.locked?"not-allowed":"pointer",textAlign:"center"}}>
+            {el.locked?"🔒":"✕ Del"}
+          </button>
+        </div>
+      </PGroup>
+    </div>
+  );
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function Modal({ title, onClose, children }) {
+  // Ignore clicks on the backdrop for the first 200 ms after mount so the
+  // tap/click that OPENED this modal cannot immediately close it (React 18
+  // event delegation bubbles the same event through the newly-rendered tree).
+  const readyRef=React.useRef(false);
+  React.useEffect(()=>{const t=setTimeout(()=>{readyRef.current=true;},200);return()=>clearTimeout(t);},[]);
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:16}} onClick={()=>{if(readyRef.current)onClose();}}>
+      <div style={{background:"#1c1c1c",border:"1px solid #333",borderRadius:8,padding:20,width:"100%",maxWidth:460,fontFamily:"monospace",maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontWeight:"bold",fontSize:14,color:"#ff6b35",marginBottom:16,letterSpacing:1}}>{title}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Print ─────────────────────────────────────────────────────────────────────
+function buildLabelHTML(elements) {
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/\n/g,"<br>");
+  const pos=el=>`position:absolute;left:${el.x}mm;top:${el.y}mm;width:${el.w}mm;height:${Math.max(el.h,0.1)}mm;overflow:hidden;opacity:${el.style?.opacity??1};transform:rotate(${el.rotation||0}deg);transform-origin:center center;filter:${el.style?.invert?"invert(1)":"none"};${el.style?.invert?"background:#ffffff;":""}box-sizing:border-box;`;
+  return elements.map(el=>{
+    if(el.type==="text") return `<div style="${pos(el)}font-size:${el.style.fontSize}pt;font-weight:${el.style.fontWeight};font-family:${el.style.fontFamily};text-align:${el.style.textAlign};color:${el.style.color};line-height:1.2;white-space:pre-wrap;word-break:break-word;">${esc(el.content)}</div>`;
+    if(el.type==="barcode") return `<svg class="bc" data-val="${el.content.replace(/"/g,"")}" data-fmt="${el.style.format||"CODE128"}" data-txt="${el.style.showText!==false}" style="${pos(el)}display:block;" xmlns="http://www.w3.org/2000/svg"></svg>`;
+    if(el.type==="qrcode"){const s=Math.round(Math.min(el.w,el.h)*3.78)-4;return `<div class="qr" data-val="${el.content.replace(/"/g,"")}" data-size="${s}" style="${pos(el)}display:flex;align-items:center;justify-content:center;"></div>`;}
+    if(el.type==="line") return `<div style="${pos(el)}background:${el.style.color};"></div>`;
+    if(el.type==="rect") return `<div style="${pos(el)}background:${el.style.fillColor};border:${el.style.strokeWidth}mm solid ${el.style.strokeColor};border-radius:${el.style.borderRadius}mm;box-sizing:border-box;"></div>`;
+    if(el.type==="image"&&el.content) return `<img src="${el.content}" style="${pos(el)}object-fit:${el.style.objectFit||"contain"};display:block;"/>`;
+    return "";
+  }).join("\n");
+}
+// ── openPrint: iframe-based (PWA-safe, no window.open) ───────────────────────
+// wMm/hMm = single label dimensions; total = number of labels (for info only)
+function openPrint(html, total, wMm, hMm){
+  // Fall back to saved USB settings or 58×40 defaults
+  if(!wMm||!hMm){ const saved=store.get('doka_usb')||{}; wMm=saved.wMm||58; hMm=saved.hMm||40; }
+  // Step 1 – render barcodes/QR inside a hidden off-screen div in the CURRENT doc
+  // so we can use the already-loaded JsBarcode / QRCode libraries directly.
+  const tmp=document.createElement('div');
+  tmp.style.cssText='position:fixed;left:-9999px;top:0;width:58mm;visibility:hidden;pointer-events:none;';
+  tmp.innerHTML=html;
+  document.body.appendChild(tmp);
+
+  // Render barcodes synchronously
+  tmp.querySelectorAll('.bc').forEach(s=>{
+    try{JsBarcode(s,s.dataset.val,{format:s.dataset.fmt,displayValue:s.dataset.txt==='true',margin:2,background:'transparent'});}catch(e){}
+  });
+
+  // Start QR rendering (QRCode.js uses setTimeout internally → wait ~900 ms)
+  tmp.querySelectorAll('.qr').forEach(d=>{
+    const sz=parseInt(d.dataset.size)||80;
+    try{new QRCode(d,{text:d.dataset.val||'QR',width:sz,height:sz});}catch(e){}
+  });
+
+  setTimeout(()=>{
+    // Step 2 – convert any QR <canvas> to <img> so innerHTML serialises correctly
+    tmp.querySelectorAll('.qr canvas').forEach(cvs=>{
+      try{
+        const img=document.createElement('img');
+        img.src=cvs.toDataURL('image/png');
+        img.width=cvs.width; img.height=cvs.height;
+        img.style.cssText='display:block;width:100%;height:100%;';
+        cvs.parentNode.replaceChild(img,cvs);
+      }catch(e){}
+    });
+
+    const rendered=tmp.innerHTML;
+    document.body.removeChild(tmp);
+
+    // Step 3 – inject into a hidden iframe and call contentWindow.print()
+    // @page uses per-label size (not total height) — each label is its own page
+    const style=`@page{size:${wMm}mm ${hMm}mm;margin:0}html,body{margin:0;padding:0;width:${wMm}mm}*{box-sizing:border-box}.label{width:${wMm}mm;height:${hMm}mm;position:relative;overflow:hidden;background:white;page-break-after:always;break-after:page}.label:last-child{page-break-after:avoid;break-after:auto}`;
+    const frame=document.createElement('iframe');
+    frame.style.cssText='position:fixed;left:-9999px;top:0;width:0;height:0;border:none;';
+    document.body.appendChild(frame);
+
+    const doc=frame.contentDocument||frame.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${style}</style></head><body>${rendered}</body></html>`);
+    doc.close();
+
+    // Small delay so the iframe finishes painting before the print dialog opens
+    setTimeout(()=>{
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+      const cleanup=()=>{try{document.body.removeChild(frame);}catch(e){}};
+      frame.contentWindow.addEventListener('afterprint',cleanup);
+      setTimeout(cleanup,8000); // fallback
+    },150);
+  },950); // wait for QRCode.js async draw
+}
+
+// ── Batch Modal ───────────────────────────────────────────────────────────────
+function BatchModal({ elements, onClose }) {
+  const [qty,setQty]=useState(1);
+  const [rows,setRows]=useState([{id:genId(),fields:{}}]);
+  const textEls=elements.filter(e=>e.type==="text");
+  const addRow=()=>setRows(r=>[...r,{id:genId(),fields:{}}]);
+  const removeRow=id=>setRows(r=>r.filter(x=>x.id!==id));
+  const setField=(rid,fid,v)=>setRows(r=>r.map(row=>row.id===rid?{...row,fields:{...row.fields,[fid]:v}}:row));
+  const usePerRow=rows.some(row=>Object.values(row.fields).some(v=>v!==""));
+  const doPrint=(forceQty)=>{
+    if(!elements.length)return;
+    let all="",total=0;
+    if(!forceQty&&usePerRow){
+      rows.forEach(row=>{
+        const ov=elements.map(el=>el.type==="text"&&row.fields[el.id]!==undefined?{...el,content:row.fields[el.id]}:el);
+        all+=`<div class="label">${buildLabelHTML(ov)}</div>\n`;
+      });
+      total=rows.length;
+    } else {
+      const n=forceQty||qty;
+      for(let i=0;i<n;i++) all+=`<div class="label">${buildLabelHTML(elements)}</div>\n`;
+      total=n;
+    }
+    const {wMm,hMm}=store.get('doka_usb')||{wMm:58,hMm:40};
+    openPrint(all,total,wMm,hMm); onClose();
+  };
+  return (
+    <Modal title="⎙ BATCH PRINT" onClose={onClose}>
+      <div style={{marginBottom:14,padding:12,background:"#161616",borderRadius:6,border:"1px solid #2a2a2a"}}>
+        <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:10}}>SIMPLE COPIES</div>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <span style={{color:"#777",fontSize:11}}>Print</span>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{...BTN,background:"#2a2a2a",padding:"4px 12px",fontSize:16}}>−</button>
+            <input type="number" value={qty} min="1" max="999" onChange={e=>setQty(Math.max(1,+e.target.value))} style={{...IS,width:60,textAlign:"center",fontSize:16,padding:"4px"}}/>
+            <button onClick={()=>setQty(q=>q+1)} style={{...BTN,background:"#2a2a2a",padding:"4px 12px",fontSize:16}}>+</button>
+          </div>
+          <span style={{color:"#777",fontSize:11}}>copies</span>
+        </div>
+        <button onClick={()=>doPrint(qty)} style={{...BTN,background:"#ff6b35",width:"100%",marginTop:12,padding:"10px",fontSize:12,letterSpacing:1}}>⎙ PRINT {qty} {qty===1?"LABEL":"LABELS"}</button>
+      </div>
+      {textEls.length>0&&(
+        <div style={{padding:12,background:"#161616",borderRadius:6,border:"1px solid #2a2a2a"}}>
+          <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:4}}>PER-PRODUCT</div>
+          <div style={{color:"#444",fontSize:9,marginBottom:10}}>Each row = 1 label with custom text</div>
+          <div style={{display:"flex",gap:6,marginBottom:6,paddingBottom:4,borderBottom:"1px solid #222"}}>
+            {textEls.map(el=><div key={el.id} style={{flex:1,fontSize:9,color:"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{el.content.slice(0,12)}"</div>)}
+            <div style={{width:28}}/>
+          </div>
+          {rows.map((row,i)=>(
+            <div key={row.id} style={{display:"flex",gap:5,marginBottom:5,alignItems:"center"}}>
+              <span style={{color:"#333",fontSize:9,minWidth:18}}>#{i+1}</span>
+              {textEls.map(el=>(
+                <input key={el.id} type="text" placeholder={el.content.slice(0,10)} value={row.fields[el.id]||""}
+                  onChange={e=>setField(row.id,el.id,e.target.value)} style={{...IS,flex:1,width:0,padding:"3px 5px",fontSize:10}}/>
+              ))}
+              <button onClick={()=>removeRow(row.id)} disabled={rows.length===1} style={{...BTN,background:"#3a1010",padding:"3px 8px",opacity:rows.length===1?0.3:1}}>✕</button>
+            </div>
+          ))}
+          <div style={{display:"flex",gap:8,marginTop:10}}>
+            <button onClick={addRow} style={{...BTN,background:"#1e2a1e",border:"1px solid #2a4a2a",color:"#6abf6a",flex:1,padding:"8px"}}>+ Add Row</button>
+            <button onClick={()=>doPrint(null)} style={{...BTN,background:"#ff6b35",flex:1,padding:"8px"}}>⎙ PRINT {rows.length}</button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ── Snap helpers ──────────────────────────────────────────────────────────────
+function computeSnap(nx, ny, ew, eh, allEls, activeId, gridSnap) {
+  // Grid snap (1mm)
+  if(gridSnap) {
+    nx = Math.round(nx);
+    ny = Math.round(ny);
+    return { nx, ny, guides: [] };
+  }
+
+  const THRESH = SNAP_THRESHOLD;
+  const others = allEls.filter(e => e.id !== activeId);
+  let snapX = null, snapY = null;
+  const guides = [];
+
+  // My snap points
+  const myXL = nx, myXC = nx + ew/2, myXR = nx + ew;
+  const myYT = ny, myYM = ny + eh/2, myYB = ny + eh;
+
+  for(const o of others) {
+    const oxs = [o.x, o.x + o.w/2, o.x + o.w];
+    const oys = [o.y, o.y + o.h/2, o.y + o.h];
+
+    for(const ox of oxs) {
+      if(snapX===null && Math.abs(myXL-ox)<THRESH){ snapX=ox; guides.push({type:'v',pos:ox}); }
+      else if(snapX===null && Math.abs(myXC-ox)<THRESH){ snapX=ox-ew/2; guides.push({type:'v',pos:ox}); }
+      else if(snapX===null && Math.abs(myXR-ox)<THRESH){ snapX=ox-ew; guides.push({type:'v',pos:ox}); }
+    }
+    for(const oy of oys) {
+      if(snapY===null && Math.abs(myYT-oy)<THRESH){ snapY=oy; guides.push({type:'h',pos:oy}); }
+      else if(snapY===null && Math.abs(myYM-oy)<THRESH){ snapY=oy-eh/2; guides.push({type:'h',pos:oy}); }
+      else if(snapY===null && Math.abs(myYB-oy)<THRESH){ snapY=oy-eh; guides.push({type:'h',pos:oy}); }
+    }
+  }
+
+  // Also snap to label edges and center
+  const labelXs = [0, LW/2, LW];
+  const labelYs = [0, LH/2, LH];
+  for(const ox of labelXs) {
+    if(snapX===null && Math.abs(myXL-ox)<THRESH){ snapX=ox; guides.push({type:'v',pos:ox}); }
+    else if(snapX===null && Math.abs(myXC-ox)<THRESH){ snapX=ox-ew/2; guides.push({type:'v',pos:ox}); }
+    else if(snapX===null && Math.abs(myXR-ox)<THRESH){ snapX=ox-ew; guides.push({type:'v',pos:ox}); }
+  }
+  for(const oy of labelYs) {
+    if(snapY===null && Math.abs(myYT-oy)<THRESH){ snapY=oy; guides.push({type:'h',pos:oy}); }
+    else if(snapY===null && Math.abs(myYM-oy)<THRESH){ snapY=oy-eh/2; guides.push({type:'h',pos:oy}); }
+    else if(snapY===null && Math.abs(myYB-oy)<THRESH){ snapY=oy-eh; guides.push({type:'h',pos:oy}); }
+  }
+
+  return { nx: snapX!==null?snapX:nx, ny: snapY!==null?snapY:ny, guides };
+}
+
+// ── WebUSB / TSPL Printing ────────────────────────────────────────────────────
+const DPI = 203;
+const mmToDots = mm => Math.round(mm / 25.4 * DPI);
+
+async function renderLabelCanvas(elements, widthMm, heightMm) {
+  const W=mmToDots(widthMm), H=mmToDots(heightMm);
+  const cvs=document.createElement('canvas');
+  cvs.width=W; cvs.height=H;
+  const ctx=cvs.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  const s=mm=>mmToDots(mm);
+
+  for(const el of elements){
+    const ex=s(el.x),ey=s(el.y),ew=s(el.w),eh=s(el.h);
+    ctx.save();
+    if(el.rotation){ ctx.translate(ex+ew/2,ey+eh/2); ctx.rotate(el.rotation*Math.PI/180); ctx.translate(-(ex+ew/2),-(ey+eh/2)); }
+    if(el.type==='text'){
+      const fsPx=el.style.fontSize*DPI/72;
+      ctx.font=`${el.style.fontWeight||'normal'} ${fsPx}px ${el.style.fontFamily||'Arial'}`;
+      ctx.textBaseline='top';
+      if(el.style.invert){ctx.fillStyle='#000';ctx.fillRect(ex,ey,ew,eh);ctx.fillStyle='#fff';}
+      else ctx.fillStyle=el.style.color||'#000';
+      const align=el.style.textAlign||'left';
+      ctx.textAlign=align;
+      const tx=align==='center'?ex+ew/2:align==='right'?ex+ew:ex;
+      (el.content||'').split('\n').forEach((ln,i)=>ctx.fillText(ln,tx,ey+i*fsPx*1.2,ew));
+    } else if(el.type==='line'){
+      ctx.fillStyle=el.style.invert?'#fff':(el.style.color||'#000');
+      ctx.fillRect(ex,ey,ew,Math.max(eh,1));
+    } else if(el.type==='rect'){
+      if(el.style.invert){ctx.fillStyle='#000';ctx.fillRect(ex,ey,ew,eh);}
+      else{
+        const fc=el.style.fillColor;
+        if(fc&&fc!=='transparent'){ctx.fillStyle=fc;ctx.fillRect(ex,ey,ew,eh);}
+        if((el.style.strokeWidth||0)>0){
+          ctx.strokeStyle=el.style.strokeColor||'#000';
+          ctx.lineWidth=s(el.style.strokeWidth);
+          ctx.strokeRect(ex+ctx.lineWidth/2,ey+ctx.lineWidth/2,ew-ctx.lineWidth,eh-ctx.lineWidth);
+        }
+      }
+    } else if(el.type==='barcode'){
+      try{
+        const tmp=document.createElementNS('http://www.w3.org/2000/svg','svg');
+        JsBarcode(tmp,el.content||'0',{format:el.style.format||'CODE128',displayValue:el.style.showText!==false,width:2,height:Math.max(eh-(el.style.showText!==false?24:4),8),margin:2,background:'white'});
+        const blob=new Blob([new XMLSerializer().serializeToString(tmp)],{type:'image/svg+xml'});
+        const url=URL.createObjectURL(blob);
+        await new Promise((res,rej)=>{const img=new Image();img.onload=()=>{ctx.drawImage(img,ex,ey,ew,eh);URL.revokeObjectURL(url);res();};img.onerror=()=>{URL.revokeObjectURL(url);res();};img.src=url;});
+      }catch(e){}
+    } else if(el.type==='qrcode'){
+      try{
+        const tmp=document.createElement('div');
+        const sz=Math.min(ew,eh);
+        new QRCode(tmp,{text:el.content||'QR',width:sz,height:sz,correctLevel:QRCode.CorrectLevel.M});
+        const qc=tmp.querySelector('canvas');
+        if(qc)ctx.drawImage(qc,ex,ey,ew,eh);
+      }catch(e){}
+    } else if(el.type==='image'&&el.content){
+      await new Promise(res=>{const img=new Image();img.onload=()=>{ctx.drawImage(img,ex,ey,ew,eh);res();};img.onerror=res;img.src=el.content;});
+    }
+    ctx.restore();
+  }
+  return cvs;
+}
+
+function canvasToTSPLBitmap(cvs){
+  const {width:W,height:H}=cvs;
+  const px=cvs.getContext('2d').getImageData(0,0,W,H).data;
+  const bpr=Math.ceil(W/8);
+  const bmp=new Uint8Array(bpr*H);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    if(0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]<128)
+      bmp[y*bpr+Math.floor(x/8)]|=(0x80>>(x%8));
+  }
+  return {bmp,bpr,W,H};
+}
+
+function buildTSPLBuffer(bd, wMm, hMm, media, copies){
+  const enc=new TextEncoder();
+  const header=[
+    `SIZE ${wMm} mm,${hMm} mm`,
+    media==='precut'?'GAP 3 mm,0 mm':'GAP 0 mm,0 mm',
+    'DIRECTION 0','CLS',
+  ].join('\r\n')+'\r\n';
+  const cmd=`BITMAP 0,0,${bd.bpr},${bd.H},0,`;
+  const footer=`\r\nPRINT ${copies},1\r\n`;
+  const hb=enc.encode(header),cb=enc.encode(cmd),fb=enc.encode(footer);
+  const out=new Uint8Array(hb.length+cb.length+bd.bmp.length+fb.length);
+  let o=0; out.set(hb,o);o+=hb.length; out.set(cb,o);o+=cb.length; out.set(bd.bmp,o);o+=bd.bmp.length; out.set(fb,o);
+  return out;
+}
+
+// ── WebUSB helpers ────────────────────────────────────────────────────────────
+// Known Xprinter USB vendor IDs (XP-470B = 0x2D37 / 11575)
+const XPRINTER_FILTERS=[{vendorId:0x2D37},{vendorId:0x1504},{vendorId:0x0FE6},{vendorId:0x2727},{vendorId:0x154F}];
+
+async function getOrRequestDevice(){
+  // 1. Reuse a previously-authorized device (no picker needed)
+  const known=await navigator.usb.getDevices();
+  if(known.length>0) return known[0];
+  // 2. Show picker — try Xprinter-specific filters first
+  try{ return await navigator.usb.requestDevice({filters:XPRINTER_FILTERS}); }
+  catch(e){
+    if(e.name==='NotFoundError'){
+      // Xprinter VIDs not matched → fall back to showing all USB devices
+      return await navigator.usb.requestDevice({filters:[{}]});
+    }
+    throw e; // AbortError = user cancelled
+  }
+}
+
+async function sendViaUSB(data, onProgress){
+  const device=await getOrRequestDevice();
+
+  // Open (handle already-open from previous session)
+  if(!device.opened) await device.open();
+  if(device.configuration===null) await device.selectConfiguration(1);
+
+  // Find bulk-OUT endpoint
+  let iface=null,ep=null;
+  outer: for(const cfg of device.configurations)
+    for(const intf of cfg.interfaces)
+      for(const alt of intf.alternates)
+        for(const e of alt.endpoints)
+          if(e.direction==='out'&&e.type==='bulk'){iface=intf;ep=e;break outer;}
+
+  if(!ep) throw new Error('No bulk-OUT endpoint found. Is this an Xprinter XP-470B?');
+
+  // Claim interface — fail gracefully if another app holds it
+  try{ await device.claimInterface(iface.interfaceNumber); }
+  catch(e){
+    if(e.name==='NetworkError'||e.message?.toLowerCase().includes('claim')||e.message?.toLowerCase().includes('access')){
+      throw new Error('Cannot claim USB interface. Close the Xprinter app (or any other printer app) and try again.');
+    }
+    throw e;
+  }
+
+  onProgress&&onProgress('printing');
+
+  // Send in chunks
+  const CHUNK=16384;
+  try{
+    for(let o=0;o<data.length;o+=CHUNK){
+      await device.transferOut(ep.endpointNumber,data.slice(o,o+CHUNK));
+    }
+  }finally{
+    // Always release/close even if transfer fails
+    try{ await device.releaseInterface(iface.interfaceNumber); }catch(_){}
+    try{ await device.close(); }catch(_){}
+  }
+}
+
+// ── USB Print Modal ───────────────────────────────────────────────────────────
+function UsbPrintModal({ elements, onClose }) {
+  const initS=()=>store.get('doka_usb')||{wMm:58,hMm:40,media:'precut',copies:1};
+  const [s,setS]=useState(initS);
+  const [status,setStatus]=useState('idle');
+  const [err,setErr]=useState('');
+  const up=(k,v)=>setS(p=>{const n={...p,[k]:v};store.set('doka_usb',n);return n;});
+
+  const STATUS_MSG={idle:'',rendering:'⏳ Rendering label…',connecting:'🔌 Waiting for printer selection…',printing:'🖨 Sending data to printer…',done:'✅ Printed!',error:'❌ Error'};
+
+  const go=async()=>{
+    if(!navigator.usb){setErr('WebUSB not supported. Use Chrome (not Firefox/Safari) on Android or desktop.');return;}
+    if(!elements.length){setErr('Canvas is empty — add some elements first.');return;}
+    setErr(''); setStatus('rendering');
+    try{
+      const cvs=await renderLabelCanvas(elements,s.wMm,s.hMm);
+      const bd=canvasToTSPLBitmap(cvs);
+      const buf=buildTSPLBuffer(bd,s.wMm,s.hMm,s.media,s.copies);
+      setStatus('connecting');
+      await sendViaUSB(buf, st=>setStatus(st));
+      setStatus('done');
+      setTimeout(onClose,2000);
+    }catch(e){
+      // Give a human-readable message for every failure case
+      let msg=e.message||String(e);
+      if(e.name==='AbortError'||e.name==='NotFoundError'){
+        msg='No printer selected. Make sure the USB OTG cable is connected, then tap the button and pick your printer from the list.';
+      } else if(msg.includes('claim')||msg.includes('Access')||msg.includes('interface')){
+        msg='USB interface busy. Close the Xprinter app (or any other app using the printer) and try again.';
+      } else if(e.name==='NetworkError'){
+        msg='USB transfer failed. Unplug and replug the USB OTG cable, then try again.';
+      }
+      setErr(msg);
+      setStatus('error');
+      setTimeout(()=>setStatus('idle'),100);
+    }
+  };
+
+  // ── Method 1: Share TSPL file → RawBT / NokoPrint / any app ─────────────────
+  const share=async()=>{
+    if(!elements.length){setErr('Canvas is empty — add some elements first.');return;}
+    setErr(''); setStatus('rendering');
+    try{
+      const cvs=await renderLabelCanvas(elements,s.wMm,s.hMm);
+      const bd=canvasToTSPLBitmap(cvs);
+      const buf=buildTSPLBuffer(bd,s.wMm,s.hMm,s.media,s.copies);
+      const blob=new Blob([buf],{type:'application/octet-stream'});
+      const file=new File([blob],'label.prn',{type:'application/octet-stream'});
+      setStatus('idle');
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:'Print Label'});
+        // User picked an app — done (we can't know if it printed)
+      } else {
+        // Desktop fallback: download the .prn file
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.download='label.prn'; a.click();
+        URL.revokeObjectURL(url);
+        flash('label.prn downloaded — open with RawBT');
+      }
+    }catch(e){
+      if(e.name!=='AbortError') setErr(e.message||String(e));
+      setStatus('idle');
+    }
+  };
+
+  const busy=status==='rendering'||status==='connecting'||status==='printing';
+
+  return(
+    <Modal title="🖨 USB Print (TSPL)" onClose={onClose}>
+      <div style={{fontSize:11,color:"#aaa"}}>
+
+        {/* Label size */}
+        <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:8}}>LABEL SIZE</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          <div>
+            <div style={{color:"#555",fontSize:9,marginBottom:4}}>Width (mm)</div>
+            <input type="number" value={s.wMm} min="20" max="120" step="1" onChange={e=>up('wMm',+e.target.value)}
+              style={{...IS,width:"100%",padding:"7px 8px",fontSize:14,textAlign:"center"}}/>
+          </div>
+          <div>
+            <div style={{color:"#555",fontSize:9,marginBottom:4}}>Height (mm)</div>
+            <input type="number" value={s.hMm} min="10" max="200" step="1" onChange={e=>up('hMm',+e.target.value)}
+              style={{...IS,width:"100%",padding:"7px 8px",fontSize:14,textAlign:"center"}}/>
+          </div>
+        </div>
+
+        {/* Presets */}
+        <div style={{color:"#555",fontSize:9,marginBottom:6}}>QUICK PRESETS</div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+          {[[58,40],[100,150],[100,100],[76,51],[50,30]].map(([w,h])=>(
+            <button key={`${w}x${h}`} onClick={()=>setS(p=>{const n={...p,wMm:w,hMm:h};store.set('doka_usb',n);return n;})}
+              style={{...BTN,padding:"4px 10px",fontSize:10,background:s.wMm===w&&s.hMm===h?"#1a2a3a":"#1e1e1e",border:`1px solid ${s.wMm===w&&s.hMm===h?"#4a9eff":"#333"}`,color:s.wMm===w&&s.hMm===h?"#4a9eff":"#777"}}>
+              {w}×{h}
+            </button>
+          ))}
+        </div>
+
+        {/* Media type */}
+        <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:8}}>MEDIA TYPE</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+          {[['precut','✂ Pre-cut labels','Fixed size labels with gaps'],['continuous','⟿ Continuous roll','No gaps, cut manually']].map(([val,lbl,desc])=>(
+            <div key={val} onClick={()=>up('media',val)}
+              style={{padding:"10px",borderRadius:5,cursor:"pointer",border:`2px solid ${s.media===val?"#ff6b35":"#2a2a2a"}`,background:s.media===val?"#2d1a0e":"#1a1a1a"}}>
+              <div style={{color:s.media===val?"#ff6b35":"#888",fontWeight:"bold",marginBottom:3,fontSize:11}}>{lbl}</div>
+              <div style={{color:"#444",fontSize:9}}>{desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Copies */}
+        <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:8}}>COPIES</div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+          <button onClick={()=>up('copies',Math.max(1,s.copies-1))} style={{...BTN,background:"#2a2a2a",padding:"6px 16px",fontSize:18}}>−</button>
+          <input type="number" value={s.copies} min="1" max="999" onChange={e=>up('copies',Math.max(1,+e.target.value))}
+            style={{...IS,width:70,textAlign:"center",fontSize:18,padding:"6px"}}/>
+          <button onClick={()=>up('copies',s.copies+1)} style={{...BTN,background:"#2a2a2a",padding:"6px 16px",fontSize:18}}>+</button>
+          <span style={{color:"#555",fontSize:10}}>× {s.wMm}×{s.hMm}mm</span>
+        </div>
+
+        {/* Status / error */}
+        {(status!=='idle'||err)&&(
+          <div style={{padding:"10px 12px",borderRadius:5,marginBottom:12,background:err?"#2a0d0d":status==='done'?"#0d2a0d":"#0d1a2a",border:`1px solid ${err?"#5a1a1a":status==='done'?"#1a5a1a":"#1a2a4a"}`,color:err?"#ff6060":status==='done'?"#60ff60":"#60a0ff",fontSize:11}}>
+            {err||STATUS_MSG[status]}
+          </div>
+        )}
+
+        {!navigator.usb&&<div style={{padding:"8px 10px",borderRadius:4,background:"#2a1a00",border:"1px solid #5a3a00",color:"#ff9040",fontSize:10,marginBottom:12}}>
+          ⚠️ WebUSB not supported. Use Chrome on Android or desktop.
+        </div>}
+
+        {/* ── Method 1: Share → RawBT / NokoPrint (Recommended) ── */}
+        <div style={{marginBottom:10}}>
+          <div style={{color:"#5a8a5a",fontSize:9,letterSpacing:2,marginBottom:6}}>★ RECOMMENDED ON ANDROID</div>
+          <button onClick={e=>{e.stopPropagation();share();}} disabled={busy}
+            style={{...BTN,background:"#0d2a0d",border:"2px solid #2a7a2a",color:"#70ee70",width:"100%",padding:"12px",fontSize:13,fontWeight:"bold",cursor:busy?"not-allowed":"pointer",letterSpacing:1,opacity:busy?0.5:1}}>
+            📤 SEND TO RAWBT / PRINT APP
+          </button>
+          <div style={{marginTop:5,color:"#3a5a3a",fontSize:9,lineHeight:1.6}}>
+            Sends TSPL file → Android share sheet → pick <strong style={{color:"#4a7a4a"}}>RawBT</strong>, NokoPrint, or PrinterShare.<br/>
+            No USB conflicts — the printer app handles the cable.
+          </div>
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0"}}>
+          <div style={{flex:1,height:1,background:"#242424"}}/>
+          <span style={{color:"#2a2a2a",fontSize:9,letterSpacing:1}}>OR</span>
+          <div style={{flex:1,height:1,background:"#242424"}}/>
+        </div>
+
+        {/* ── Method 2: Direct WebUSB ── */}
+        <div>
+          <div style={{color:"#555",fontSize:9,letterSpacing:2,marginBottom:6}}>DIRECT WEBUSBR (ADVANCED)</div>
+          <button onClick={e=>{e.stopPropagation();go();}} disabled={busy||!navigator.usb}
+            style={{...BTN,background:busy?"#2a2a2a":"#ff6b35",width:"100%",padding:"12px",fontSize:13,fontWeight:"bold",opacity:busy||!navigator.usb?0.5:1,cursor:busy||!navigator.usb?"not-allowed":"pointer",letterSpacing:1}}>
+            {busy?STATUS_MSG[status]:"🔌 CONNECT & PRINT DIRECT"}
+          </button>
+          <div style={{marginTop:5,color:"#333",fontSize:9,lineHeight:1.6}}>
+            When plugging USB OTG, Android shows "Choose an app" —{" "}
+            <strong style={{color:"#444"}}>dismiss without picking any app</strong>, then tap above.<br/>
+            If RawBT/NokoPrint auto-launches: Android Settings → Apps → that app → Open by default → Clear defaults.{"  "}
+            <span onClick={async()=>{
+              try{
+                const devs=await navigator.usb.getDevices();
+                for(const d of devs){try{await navigator.usb.forgetDevice(d);}catch(_){}}
+                setErr(''); flash('Printer forgotten.');
+              }catch(e){setErr('Could not forget: '+e.message);}
+            }} style={{color:"#ff6b35",cursor:"pointer",textDecoration:"underline"}}>Forget printer</span>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App() {
+  const [elements,  setElements]  = useState([]);
+  const [selected,  setSelected]  = useState(null);
+  const [zoom,      setZoom]      = useState(0.9);
+  const [grid,      setGrid]      = useState(true);
+  const [snap,      setSnap]      = useState(true);
+  const [templates, setTemplates] = useState({});
+  const [layout,    setLayout]    = useState("side");
+  const [propsOpen, setPropsOpen] = useState(true);
+  const [showSave,  setShowSave]  = useState(false);
+  const [showLoad,  setShowLoad]  = useState(false);
+  const [showBatch, setShowBatch] = useState(false);
+  const [showUsbPrint,setShowUsbPrint]=useState(false);
+  const [androidPrinterConnected,setAndroidPrinterConnected]=useState(false);
+  const [tplName,   setTplName]   = useState("");
+  const [msg,       setMsg]       = useState("");
+  const [snapGuides,setSnapGuides]= useState([]);
+  const [canInstall,setCanInstall]= useState(false);
+  const [showPwaInfo,setShowPwaInfo]=useState(false);
+  const [canUndo,   setCanUndo]   = useState(false);
+  const [canRedo,   setCanRedo]   = useState(false);
+
+  const scale=MM*zoom, scaleRef=useRef(scale);
+  useEffect(()=>{ scaleRef.current=scale; },[scale]);
+
+  const dragging=useRef(null), resizing=useRef(null), rotating=useRef(null);
+  const fileInput=useRef(null), pendingImgId=useRef(null);
+  const labelRef=useRef(null);
+  const snapRef=useRef(snap);
+  useEffect(()=>{ snapRef.current=snap; },[snap]);
+  const gridRef=useRef(grid);
+  useEffect(()=>{ gridRef.current=grid; },[grid]);
+
+  // ── History (undo/redo) ────────────────────────────────────────────────────
+  const historyRef  = useRef({ stack: [[]], idx: 0 });
+  const elementsRef = useRef([]);
+  const histDebounce= useRef(null);
+  useEffect(()=>{ elementsRef.current=elements; },[elements]);
+
+  const syncUndoRedo = useCallback(()=>{
+    const {stack,idx}=historyRef.current;
+    setCanUndo(idx>0);
+    setCanRedo(idx<stack.length-1);
+  },[]);
+
+  const pushHistory = useCallback((els)=>{
+    const h=historyRef.current;
+    const stack=h.stack.slice(0,h.idx+1);
+    stack.push(JSON.parse(JSON.stringify(els)));
+    if(stack.length>60)stack.shift();
+    historyRef.current={stack,idx:stack.length-1};
+    syncUndoRedo();
+  },[syncUndoRedo]);
+
+  const pushHistoryDebounced = useCallback(()=>{
+    clearTimeout(histDebounce.current);
+    histDebounce.current=setTimeout(()=>pushHistory(elementsRef.current),700);
+  },[pushHistory]);
+
+  const undo=useCallback(()=>{
+    const h=historyRef.current;
+    if(h.idx<=0)return;
+    h.idx--;
+    setElements(JSON.parse(JSON.stringify(h.stack[h.idx])));
+    setSelected(null);
+    syncUndoRedo();
+  },[syncUndoRedo]);
+
+  const redo=useCallback(()=>{
+    const h=historyRef.current;
+    if(h.idx>=h.stack.length-1)return;
+    h.idx++;
+    setElements(JSON.parse(JSON.stringify(h.stack[h.idx])));
+    setSelected(null);
+    syncUndoRedo();
+  },[syncUndoRedo]);
+
+  const flash=t=>{ setMsg(t); setTimeout(()=>setMsg(""),2400); };
+
+  // PWA install prompt
+  const deferredPrompt=useRef(null);
+  useEffect(()=>{
+    const handler=e=>{ e.preventDefault(); deferredPrompt.current=e; setCanInstall(true); };
+    window.addEventListener("beforeinstallprompt",handler);
+    return()=>window.removeEventListener("beforeinstallprompt",handler);
+  },[]);
+
+  const handleInstall=async()=>{
+    if(deferredPrompt.current){
+      deferredPrompt.current.prompt();
+      await deferredPrompt.current.userChoice;
+      deferredPrompt.current=null;
+      setCanInstall(false);
+    } else {
+      setShowPwaInfo(true);
+    }
+  };
+
+  useEffect(()=>{
+    const sl=store.get("doka_label_templates"); if(sl) setTemplates(sl);
+    const ly=store.get("doka_layout"); if(ly) setLayout(ly);
+    const sn=store.get("doka_snap"); if(sn!==null) setSnap(sn);
+    const w=window.innerWidth;
+    if(w<500) setZoom(0.6); else if(w<700) setZoom(0.75);
+  },[]);
+
+  // Move / resize / rotate
+  const handleMove=useCallback((cx,cy)=>{
+    const s=scaleRef.current;
+
+    if(rotating.current){
+      const {id,centerX,centerY}=rotating.current;
+      let angle=Math.atan2(cy-centerY,cx-centerX)*(180/Math.PI)+90;
+      // Snap to 15° increments if close
+      const snapped=Math.round(angle/15)*15;
+      if(Math.abs(angle-snapped)<5)angle=snapped;
+      setElements(prev=>prev.map(el=>el.id===id?{...el,rotation:Math.round(angle)}:el));
+      return;
+    }
+
+    if(dragging.current){
+      const {id,sx,sy,ex,ey,ew,eh}=dragging.current;
+      let nx=Math.max(0,Math.min(LW-ew,ex+(cx-sx)/s));
+      let ny=Math.max(0,Math.min(LH-eh,ey+(cy-sy)/s));
+      let guides=[];
+      if(snapRef.current){
+        setElements(prev=>{
+          const r=computeSnap(nx,ny,ew,eh,prev,id,gridRef.current);
+          nx=Math.max(0,Math.min(LW-ew,r.nx));
+          ny=Math.max(0,Math.min(LH-eh,r.ny));
+          guides=r.guides;
+          return prev.map(el=>el.id===id?{...el,x:nx,y:ny}:el);
+        });
+      } else {
+        setElements(prev=>prev.map(el=>el.id===id?{...el,x:nx,y:ny}:el));
+      }
+      setSnapGuides(guides);
+      return;
+    }
+
+    if(resizing.current){
+      const {id,sx,sy,ex,ey,ew,eh,handle:h}=resizing.current;
+      const rdx=(cx-sx)/s,rdy=(cy-sy)/s;
+      let nx=ex,ny=ey,nw=ew,nh=eh;
+      if(h.dx===1){nx=Math.min(ex+rdx,ex+ew-2);nw=ew-(nx-ex);}else if(h.dw===1){nw=Math.max(2,ew+rdx);}
+      if(h.dy===1){ny=Math.min(ey+rdy,ey+eh-0.5);nh=eh-(ny-ey);}else if(h.dh===1){nh=Math.max(0.5,eh+rdy);}
+      if(snapRef.current&&gridRef.current){ nx=Math.round(nx);ny=Math.round(ny);nw=Math.round(nw);nh=Math.round(nh); }
+      nx=Math.max(0,nx);ny=Math.max(0,ny);nw=Math.min(nw,LW-nx);nh=Math.min(nh,LH-ny);
+      setElements(prev=>prev.map(el=>el.id===id?{...el,x:nx,y:ny,w:nw,h:nh}:el));
+    }
+  },[]);
+
+  const stopAll=useCallback(()=>{
+    const wasActive=dragging.current||resizing.current||rotating.current;
+    dragging.current=null;resizing.current=null;rotating.current=null;
+    setSnapGuides([]);
+    if(wasActive) pushHistory(elementsRef.current);
+  },[pushHistory]);
+
+  const onMM=useCallback(e=>handleMove(e.clientX,e.clientY),[handleMove]);
+  const onTM=useCallback(e=>{e.preventDefault();handleMove(e.touches[0].clientX,e.touches[0].clientY);},[handleMove]);
+
+  useEffect(()=>{
+    window.addEventListener("mousemove",onMM);window.addEventListener("mouseup",stopAll);
+    window.addEventListener("touchmove",onTM,{passive:false});window.addEventListener("touchend",stopAll);
+    return()=>{window.removeEventListener("mousemove",onMM);window.removeEventListener("mouseup",stopAll);window.removeEventListener("touchmove",onTM);window.removeEventListener("touchend",stopAll);};
+  },[onMM,onTM,stopAll]);
+
+  const onDragStart  =useCallback((cx,cy,el)=>{ if(el.locked)return; dragging.current={id:el.id,sx:cx,sy:cy,ex:el.x,ey:el.y,ew:el.w,eh:el.h}; },[]);
+  const onResizeStart=useCallback((cx,cy,el,h)=>{ if(el.locked)return; resizing.current={id:el.id,sx:cx,sy:cy,ex:el.x,ey:el.y,ew:el.w,eh:el.h,handle:h}; },[]);
+
+  const onRotateStart=useCallback((cx,cy,el)=>{
+    if(el.locked)return;
+    const rect=labelRef.current?.getBoundingClientRect();
+    if(!rect)return;
+    const s=scaleRef.current;
+    const centerX=rect.left+(el.x+el.w/2)*s;
+    const centerY=rect.top +(el.y+el.h/2)*s;
+    rotating.current={id:el.id,centerX,centerY};
+  },[]);
+
+  // CRUD
+  const addEl=type=>{
+    const base=DEFAULTS[type],el={...base,style:{...base.style},id:genId()};
+    setElements(prev=>{ const next=[...prev,el]; pushHistory(next); return next; });
+    setSelected(el.id);
+    if(layout==="bar") setPropsOpen(true);
+  };
+  const updateEl=(id,updates)=>{
+    setElements(prev=>prev.map(el=>{
+      if(el.id!==id)return el;
+      if(updates.style)return{...el,...updates,style:{...el.style,...updates.style}};
+      return{...el,...updates};
+    }));
+    pushHistoryDebounced();
+  };
+  const deleteEl=useCallback(()=>{
+    setElements(prev=>{ const el=prev.find(e=>e.id===selected); if(el?.locked){flash("Unlock first");return prev;} const next=prev.filter(e=>e.id!==selected); pushHistory(next); return next; });
+    setSelected(null);
+  },[selected,pushHistory]);
+  const duplicateEl=()=>{ const el=elements.find(e=>e.id===selected);if(!el)return;const copy={...el,style:{...el.style},id:genId(),locked:false,x:Math.min(el.x+3,LW-el.w),y:Math.min(el.y+3,LH-el.h)};setElements(prev=>{ const next=[...prev,copy]; pushHistory(next); return next; });setSelected(copy.id); };
+  const bringFront=()=>{ if(!selected)return; setElements(prev=>{const el=prev.find(e=>e.id===selected);const next=[...prev.filter(e=>e.id!==selected),el];pushHistory(next);return next;}); };
+  const sendBack  =()=>{ if(!selected)return; setElements(prev=>{const el=prev.find(e=>e.id===selected);const next=[el,...prev.filter(e=>e.id!==selected)];pushHistory(next);return next;}); };
+  const selectEl=id=>{ setSelected(id); if(layout==="bar") setPropsOpen(true); };
+
+  // Image
+  const handleImageUpload  =id=>{ pendingImgId.current=id;   fileInput.current?.click(); };
+  const addImageFromToolbar=()=>{ pendingImgId.current=null; fileInput.current?.click(); };
+  const onFileChange=e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const id=pendingImgId.current;
+      if(id){ updateEl(id,{content:ev.target.result}); }
+      else{ const base=DEFAULTS.image;const el={...base,style:{...base.style},id:genId(),content:ev.target.result};setElements(prev=>[...prev,el]);setSelected(el.id);if(layout==="bar")setPropsOpen(true); }
+      pendingImgId.current=null;
+    };
+    reader.readAsDataURL(file);e.target.value="";
+  };
+
+  // Templates
+  const saveTpl=()=>{ const name=tplName.trim();if(!name)return;const u={...templates,[name]:elements};setTemplates(u);store.set("doka_label_templates",u);setShowSave(false);setTplName("");flash(`Saved: "${name}"`); };
+  const loadTpl=name=>{ const els=templates[name]||[]; setElements(els); pushHistory(els); setSelected(null);setShowLoad(false);flash(`Loaded: "${name}"`); };
+  const deleteTpl=name=>{ const u={...templates};delete u[name];setTemplates(u);store.set("doka_label_templates",u);flash("Deleted"); };
+
+  // ── Android bridge callbacks (injected by native app) ────────────────────
+  React.useEffect(()=>{
+    window.onAndroidPrintResult=(success,msg)=>{
+      flash((success?'✅ ':'❌ ')+msg);
+    };
+    window.onAndroidPrinterStatus=(connected)=>{
+      setAndroidPrinterConnected(connected);
+      flash(connected?'🖨 Printer connected!':'⚠️ Printer disconnected');
+    };
+    return ()=>{
+      delete window.onAndroidPrintResult;
+      delete window.onAndroidPrinterStatus;
+    };
+  },[]);
+
+  // Safe base64 encode for large Uint8Array without stack overflow
+  function uint8ToBase64(bytes){
+    let binary='';
+    const CHUNK=8192;
+    for(let i=0;i<bytes.length;i+=CHUNK){
+      binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+CHUNK,bytes.length)));
+    }
+    return btoa(binary);
+  }
+
+  const handlePrint=async()=>{
+    if(!elements.length){flash('Canvas is empty');return;}
+
+    // ── Native Android path: bypass the modal, print directly ────────────────
+    if(typeof AndroidBridge!=='undefined'){
+      const saved=store.get('doka_usb')||{};
+      const wMm=saved.wMm||58,hMm=saved.hMm||40;
+      const media=saved.media||'gap',copies=saved.copies||1;
+      flash('⏳ Rendering…');
+      try{
+        const cvs=await renderLabelCanvas(elements,wMm,hMm);
+        const bd=canvasToTSPLBitmap(cvs);
+        const buf=buildTSPLBuffer(bd,wMm,hMm,media,copies);
+        const b64=uint8ToBase64(new Uint8Array(buf));
+        AndroidBridge.printTSPL(b64);
+      }catch(e){
+        flash('❌ '+e.message);
+      }
+      return;
+    }
+
+    // ── Browser path: open USB/share modal ───────────────────────────────────
+    setShowUsbPrint(true);
+  };
+
+  // PDF/browser-print fallback (respects label size, but uses Android print dialog)
+  const handlePdfPrint=()=>{
+    if(!elements.length){flash("Canvas is empty");return;}
+    openPrint(`<div class="label">${buildLabelHTML(elements)}</div>`,1);
+  };
+
+  const toggleLayout=()=>{
+    const next=layout==="side"?"bar":"side";
+    setLayout(next);store.set("doka_layout",next);setSelected(null);
+  };
+  const toggleSnap=()=>{ setSnap(s=>{ const n=!s;store.set("doka_snap",n);return n; }); };
+
+  useEffect(()=>{
+    const onKey=e=>{
+      // Undo
+      if((e.ctrlKey||e.metaKey)&&e.key==="z"&&!e.shiftKey){ e.preventDefault();undo();return; }
+      // Redo
+      if((e.ctrlKey||e.metaKey)&&(e.key==="y"||(e.key==="z"&&e.shiftKey))){ e.preventDefault();redo();return; }
+      if((e.key==="Delete"||e.key==="Backspace")&&selected){ if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;deleteEl(); }
+    };
+    window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);
+  },[selected,deleteEl,undo,redo]);
+
+  const selectedEl=elements.find(e=>e.id===selected);
+  const cW=LW*scale, cH=LH*scale;
+
+  const addItems=[
+    {key:"text",    icon:"T",   label:"Text",    action:()=>addEl("text")},
+    {key:"barcode", icon:"▌▌▌", label:"Barcode", action:()=>addEl("barcode")},
+    {key:"qrcode",  icon:"⊞",   label:"QR",      action:()=>addEl("qrcode")},
+    {key:"line",    icon:"—",   label:"Line",     action:()=>addEl("line")},
+    {key:"rect",    icon:"▭",   label:"Shape",    action:()=>addEl("rect")},
+    {key:"image",   icon:"🖼",   label:"Image",    action:()=>addImageFromToolbar()},
+  ];
+  const TB={background:"#1e1e1e",border:"1px solid #2a2a2a",color:"#bbb",padding:"7px 10px",borderRadius:4,cursor:"pointer",fontSize:11,fontFamily:"monospace",textAlign:"left",display:"flex",alignItems:"center",gap:8,width:"100%"};
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"#111",color:"#eee",fontFamily:"monospace",overflow:"hidden"}}>
+      <input ref={fileInput} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}}/>
+
+      {/* ── TOP BAR (2 rows) ─────────────────────────────────────── */}
+      <div className="top-bar">
+        {/* Row 1: brand + toggles + print */}
+        <div className="top-row1">
+          <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:13,letterSpacing:2,color:"#ff6b35",whiteSpace:"nowrap",marginRight:2}}>
+            DK<span style={{color:"#333"}}>LB</span>
+          </div>
+          {/* Layout */}
+          <button onClick={toggleLayout} title="Toggle layout" className={`tb-btn ${layout==="bar"?"lay-on":"lay-off"}`}>{layout==="bar"?"▤":"▦"}</button>
+          {/* Grid */}
+          <button onClick={()=>setGrid(g=>!g)} title="Toggle grid" className={`tb-btn${grid?" grid-on":""}`}>⊞</button>
+          {/* Snap */}
+          <button onClick={toggleSnap} title="Toggle snap" className={`tb-btn${snap?" on":""}`}>🧲</button>
+          <div style={{flex:1}}/>
+          {msg&&<span style={{fontSize:9,color:"#ff6b35",fontStyle:"italic",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginRight:4}}>{msg}</span>}
+          {/* Print → USB direct (Android native) or modal (browser) */}
+          <button onClick={e=>{e.stopPropagation();handlePrint();}} style={{background:"#ff6b35",border:"none",color:"#fff",padding:"0 12px",height:28,borderRadius:4,cursor:"pointer",fontSize:11,fontWeight:"bold",fontFamily:"monospace",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+            {typeof AndroidBridge!=='undefined'&&<span style={{width:7,height:7,borderRadius:"50%",background:androidPrinterConnected?"#6fff6f":"#ff4444",display:"inline-block",flexShrink:0}}/>}
+            ⎙ PRINT
+          </button>
+        </div>
+        {/* Row 2: undo/redo + zoom + batch + install */}
+        <div className="top-row2">
+          {/* Undo */}
+          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="tb-btn" style={{color:canUndo?"#aaa":"#333",fontSize:15}}>↩</button>
+          {/* Redo */}
+          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" className="tb-btn" style={{color:canRedo?"#aaa":"#333",fontSize:15}}>↪</button>
+          <div style={{width:1,height:18,background:"#2a2a2a",margin:"0 2px",flexShrink:0}}/>
+          {/* Zoom */}
+          <button onClick={()=>setZoom(z=>+(Math.max(0.4,z-0.1)).toFixed(1))} className="tb-btn" style={{fontSize:16,fontWeight:"bold"}}>−</button>
+          <span style={{fontSize:10,minWidth:32,textAlign:"center",color:"#888",flexShrink:0}}>{Math.round(zoom*100)}%</span>
+          <button onClick={()=>setZoom(z=>+(Math.min(3,z+0.1)).toFixed(1))} className="tb-btn" style={{fontSize:16,fontWeight:"bold"}}>+</button>
+          <div style={{flex:1}}/>
+          {/* PWA Install — always visible, shows info if HTTPS not available */}
+          <button onClick={handleInstall} title={canInstall?"Install as app":"How to install as app"} className="tb-btn" style={{color:canInstall?"#6abf6a":"#555",borderColor:canInstall?"#3a6a3a":"#2a2a2a",background:canInstall?"#1a2a1a":"#1e1e1e"}}>⊕</button>
+          {/* PDF export — browser print dialog, useful for Save as PDF at correct label size */}
+          <button onClick={e=>{e.stopPropagation();handlePdfPrint();}} title="Save as PDF / browser print" className="tb-btn" style={{color:"#70b0ff",borderColor:"#1a2a4a",background:"#0a1020",fontSize:10,fontWeight:"bold"}}>PDF</button>
+          {/* Batch */}
+          <button onClick={e=>{e.stopPropagation();if(!elements.length){flash("Empty");return;}setShowBatch(true);}} title="Batch Print" className="tb-btn" style={{color:"#8888ff",borderColor:"#2a2a5a",background:"#1a1a2e",fontSize:12}}>⎙N</button>
+        </div>
+      </div>
+
+      {/* ── BAR MODE: 2-row toolbar ─────────────────────────────── */}
+      {layout==="bar"&&(
+        <div className="bar-toolbar">
+          <div className="bar-row-add">
+            {addItems.map(({key,icon,label,action})=>(
+              <button key={key} onClick={action} className="bar-btn">
+                <span className="icon">{icon}</span>
+                <span className="lbl">{label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="bar-row-meta">
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,flexShrink:0,width:"42%"}}>
+              {[{icon:"💾",label:"Save",action:()=>setShowSave(true)},{icon:"📂",label:"Load",action:()=>setShowLoad(true)},{icon:"✕",label:"Clear",action:()=>{setElements([]);pushHistory([]);setSelected(null);flash("Cleared");}}].map(({icon,label,action})=>(
+                <button key={label} onClick={action} className="bar-btn"><span className="icon">{icon}</span><span className="lbl">{label}</span></button>
+              ))}
+            </div>
+            <div style={{width:1,background:"#2a2a2a",margin:"0 4px",flexShrink:0}}/>
+            <div className="layer-chips">
+              {elements.length===0
+                ? <span style={{color:"#333",fontSize:9}}>no layers</span>
+                : <>
+                    <span style={{color:"#3a3a3a",fontSize:8,letterSpacing:1,flexShrink:0}}>LAYERS</span>
+                    {[...elements].reverse().map(el=>(
+                      <div key={el.id} onClick={()=>selectEl(el.id)} className={`layer-chip${selected===el.id?" active":""}`}>
+                        {el.locked&&<span style={{fontSize:8}}>🔒</span>}
+                        {el.rotation?<span style={{fontSize:7,opacity:0.7}}>{el.rotation}°</span>:null}
+                        {el.type==="text"?`"${el.content.slice(0,7)}"`:el.type.toUpperCase()}
+                      </div>
+                    ))}
+                  </>
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BODY ──────────────────────────────────────────────────── */}
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+
+        {/* SIDE MODE: Left toolbar */}
+        {layout==="side"&&(
+          <div style={{width:120,background:"#141414",borderRight:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:2,padding:8,overflowY:"auto",flexShrink:0}}>
+            <div style={{fontSize:8,color:"#3a3a3a",letterSpacing:2,marginBottom:5}}>ADD</div>
+            {addItems.map(({key,icon,label,action})=>(
+              <button key={key} onClick={action} style={TB}>
+                <span style={{fontSize:13,width:14,textAlign:"center"}}>{icon}</span>
+                <span style={{fontSize:10}}>{label}</span>
+              </button>
+            ))}
+            <div style={{fontSize:8,color:"#3a3a3a",letterSpacing:2,marginTop:12,marginBottom:5}}>TEMPLATES</div>
+            <button onClick={()=>setShowSave(true)} style={TB}><span>💾</span><span style={{fontSize:10}}>Save</span></button>
+            <button onClick={()=>setShowLoad(true)} style={TB}><span>📂</span><span style={{fontSize:10}}>Load</span></button>
+            <button onClick={()=>{setElements([]);pushHistory([]);setSelected(null);flash("Cleared");}} style={TB}><span>✕</span><span style={{fontSize:10}}>Clear</span></button>
+            {elements.length>0&&<>
+              <div style={{fontSize:8,color:"#3a3a3a",letterSpacing:2,marginTop:12,marginBottom:5}}>LAYERS</div>
+              {[...elements].reverse().map(el=>(
+                <div key={el.id} onClick={()=>selectEl(el.id)} style={{padding:"3px 7px",borderRadius:3,cursor:"pointer",fontSize:9,background:selected===el.id?"#2d1a0e":"#1a1a1a",border:`1px solid ${selected===el.id?"#ff6b35":"#222"}`,color:selected===el.id?"#ff6b35":el.locked?"#3a8fff":"#666",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+                  {el.locked&&<span style={{fontSize:8}}>🔒</span>}
+                  {el.rotation?<span style={{fontSize:7,opacity:0.6}}>{el.rotation}°</span>:null}
+                  {el.type==="text"?`"${el.content.slice(0,9)}"`:el.type.toUpperCase()}
+                </div>
+              ))}
+            </>}
+          </div>
+        )}
+
+        {/* Canvas + bottom props */}
+        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+          {/* Canvas */}
+          <div style={{flex:1,overflow:"auto",display:"flex",alignItems:"center",justifyContent:"center",background:"#181818",padding:12}}
+            onClick={()=>setSelected(null)}>
+            <div ref={labelRef} style={{
+              width:cW,height:cH,background:"white",position:"relative",flexShrink:0,
+              boxShadow:"0 8px 60px rgba(0,0,0,0.8)",
+              backgroundImage:grid?"linear-gradient(rgba(0,0,0,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.07) 1px,transparent 1px)":"none",
+              backgroundSize:grid?`${scale}px ${scale}px`:"none",
+              overflow:"visible",
+            }}>
+              {elements.length===0&&(
+                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#ccc",fontSize:11,pointerEvents:"none",gap:4}}>
+                  <div style={{fontSize:22}}>+</div>
+                  <div style={{textAlign:"center",padding:"0 8px"}}>{layout==="bar"?"Tap a button above to add":"Add elements from the left"}</div>
+                  <div style={{fontSize:9,color:"#aaa"}}>58 × 40 mm</div>
+                </div>
+              )}
+              {/* Snap guides */}
+              {snapGuides.map((g,i)=>(
+                g.type==="v"
+                  ?<div key={i} className="snap-guide-v" style={{left:g.pos*scale}}/>
+                  :<div key={i} className="snap-guide-h" style={{top:g.pos*scale}}/>
+              ))}
+              {elements.map(el=>(
+                <CanvasEl key={el.id} el={el} scale={scale} selected={selected}
+                  onSelect={selectEl} onDragStart={onDragStart} onResizeStart={onResizeStart} onRotateStart={onRotateStart}/>
+              ))}
+            </div>
+          </div>
+
+          {/* BAR MODE: Fixed bottom properties bar */}
+          {layout==="bar"&&(
+            <div className="props-bar" style={{height: propsOpen ? PROPS_H_EXPANDED : PROPS_H_COLLAPSED}}>
+              <div className="props-bar-handle" onClick={()=>setPropsOpen(o=>!o)}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:32,height:3,background:"#333",borderRadius:2}}/>
+                  {selectedEl
+                    ? <span style={{color:"#ff6b35",fontSize:10,fontWeight:"bold",textTransform:"uppercase",letterSpacing:1}}>■ {selectedEl.type}{selectedEl.rotation?` · ${selectedEl.rotation}°`:""}</span>
+                    : <span style={{color:"#444",fontSize:10}}>Properties</span>
+                  }
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {selectedEl&&(
+                    <button onClick={e=>{e.stopPropagation();updateEl(selectedEl.id,{locked:!selectedEl.locked});}}
+                      style={{...BTN,padding:"2px 8px",fontSize:9,background:selectedEl.locked?"#0d2a4a":"#1e1e1e",border:`1px solid ${selectedEl.locked?"#3a8fff":"#333"}`,color:selectedEl.locked?"#3a8fff":"#555"}}>
+                      {selectedEl.locked?"🔒":"🔓"}
+                    </button>
+                  )}
+                  <span style={{color:"#444",fontSize:14}}>{propsOpen?"▼":"▲"}</span>
+                </div>
+              </div>
+              <div className="props-bar-body">
+                <PropsContent el={selectedEl} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onFront={bringFront} onBack={sendBack} onImageUpload={handleImageUpload}/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* SIDE MODE: Right props panel */}
+        {layout==="side"&&(
+          <div style={{width:195,background:"#141414",borderLeft:"1px solid #1e1e1e",overflowY:"auto",flexShrink:0}}>
+            <PropsContent el={selectedEl} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onFront={bringFront} onBack={sendBack} onImageUpload={handleImageUpload}/>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showUsbPrint&&<UsbPrintModal elements={elements} onClose={()=>setShowUsbPrint(false)}/>}
+      {showBatch&&<BatchModal elements={elements} onClose={()=>setShowBatch(false)}/>}
+      {showPwaInfo&&(
+        <Modal title="⊕ Install as App" onClose={()=>setShowPwaInfo(false)}>
+          <div style={{fontSize:11,color:"#aaa",lineHeight:1.8}}>
+            <div style={{background:"#1a1a1a",border:"1px solid #ff6b3540",borderRadius:6,padding:12,marginBottom:14,color:"#ff9060"}}>
+              ⚠️ PWA install requires the file to be hosted on a web server with <strong>HTTPS</strong>. Opening from a file manager ({location.protocol === 'file:' || location.protocol === 'content:' ? "detected: local file" : location.protocol + "//"}) won't trigger install.
+            </div>
+
+            <div style={{color:"#888",fontSize:9,letterSpacing:2,marginBottom:8}}>FREE HOSTING OPTIONS</div>
+            {[
+              ["GitHub Pages","Upload to a GitHub repo → Settings → Pages → Enable","https://pages.github.com"],
+              ["Netlify Drop","Drag & drop the folder at netlify.com/drop","https://app.netlify.com/drop"],
+              ["Vercel","vercel.com → drag & drop deploy","https://vercel.com"],
+            ].map(([name,desc,url])=>(
+              <div key={name} style={{marginBottom:10,padding:"8px 10px",background:"#1a1a1a",borderRadius:4,border:"1px solid #2a2a2a"}}>
+                <div style={{color:"#eee",fontWeight:"bold",marginBottom:2}}>{name}</div>
+                <div style={{color:"#666",fontSize:10}}>{desc}</div>
+                <div style={{color:"#4a9eff",fontSize:9,marginTop:2}}>{url}</div>
+              </div>
+            ))}
+
+            <div style={{color:"#888",fontSize:9,letterSpacing:2,margin:"14px 0 8px"}}>iOS SAFARI (ANY CONNECTION)</div>
+            <div style={{padding:"8px 10px",background:"#1a1a1a",borderRadius:4,border:"1px solid #2a2a2a",color:"#aaa",fontSize:10,lineHeight:1.6}}>
+              Open in Safari → tap <strong style={{color:"#eee"}}>Share ↑</strong> → <strong style={{color:"#eee"}}>"Add to Home Screen"</strong>
+            </div>
+
+            <button onClick={()=>setShowPwaInfo(false)} style={{...BTN,background:"#ff6b35",width:"100%",marginTop:16,padding:"10px",fontSize:12}}>Got it</button>
+          </div>
+        </Modal>
+      )}
+      {showSave&&(
+        <Modal title="💾 Save Template" onClose={()=>setShowSave(false)}>
+          <input type="text" value={tplName} onChange={e=>setTplName(e.target.value)} placeholder="Template name..." autoFocus
+            style={{...IS,width:"100%",padding:"8px 10px",marginBottom:12,fontSize:13}} onKeyDown={e=>e.key==="Enter"&&saveTpl()}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={saveTpl} style={{...BTN,background:"#ff6b35",padding:"8px 20px",fontSize:12}}>Save</button>
+            <button onClick={()=>setShowSave(false)} style={{...BTN,background:"#2a2a2a",padding:"8px 20px",fontSize:12}}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+      {showLoad&&(
+        <Modal title="📂 Load Template" onClose={()=>setShowLoad(false)}>
+          {Object.keys(templates).length===0
+            ?<div style={{color:"#555",fontSize:11}}>No templates saved yet.</div>
+            :Object.keys(templates).map(name=>(
+              <div key={name} style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                <div onClick={()=>loadTpl(name)} style={{flex:1,padding:"10px 12px",cursor:"pointer",borderRadius:4,background:"#1e1e1e",border:"1px solid #2a2a2a",color:"#ccc",fontSize:12}}>{name}</div>
+                <button onClick={()=>deleteTpl(name)} style={{...BTN,background:"#3a1010",padding:"8px 10px"}}>✕</button>
+              </div>
+            ))}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+<script>
+// ── PWA: Service Worker registration ─────────────────────────────────────────
+// manifest.json is linked statically above (no blob needed)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('./sw-doka.js')
+    .then(r => console.info('[DokaLabel] SW registered:', r.scope))
+    .catch(e => console.warn('[DokaLabel] SW failed:', e));
+} else {
+  console.info('[DokaLabel] SW skipped – needs HTTPS. Protocol:', location.protocol);
+}
+</script>
+</body>
+</html>
